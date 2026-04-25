@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ResumeAI — Smart Resume Analyzer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- NAVBAR -->
+
+<nav class="navbar">
+  <div class="logo">Resume<span>AI</span></div>
+  <div class="nav-right">
+    <span id="navUser" class="nav-user"></span>
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle theme">
+      <span class="theme-icon">🌙</span>
+    </button>
+    <button class="btn-ghost" onclick="logout()">Logout</button>
+  </div>
+</nav>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" class="fullscreen-center">
+  <div class="login-card glass">
+    <div class="login-badge">AI-Powered</div>
+    <h1>Analyze Your <br><em>Resume Instantly</em></h1>
+    <p class="login-sub">Get ATS score, strengths & actionable improvements in seconds.</p>
+    <div class="input-group">
+      <label>Your Name</label>
+      <input type="text" id="username" placeholder="e.g. Rahul Sharma" autocomplete="off" />
+    </div>
+    <button class="btn-primary" onclick="login()">
+      Get Started <span class="arrow">→</span>
+    </button>
+    <div class="login-features">
+      <span>⚡ Instant</span>
+      <span>📊 ATS Score</span>
+      <span>💡 AI Insights</span>
+    </div>
+  </div>
+  <div class="login-visual">
+    <div class="floating-card glass fc1">ATS Score <strong>87%</strong></div>
+    <div class="floating-card glass fc2">💪 Strong keywords found</div>
+    <div class="floating-card glass fc3">📄 3 improvements ready</div>
+    <div class="orb orb1"></div>
+    <div class="orb orb2"></div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" style="display:none;">
+
+  <!-- HERO — text aligned right -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-tag">AI Resume Analyzer</div>
+      <h1 class="hero-title">Your resume,<br><em>perfected.</em></h1>
+      <p class="hero-sub">Upload your PDF and get a full ATS analysis with smart suggestions.</p>
+    </div>
+  </section>
+
+  <!-- STATS BAR -->
+  <div class="stats-bar glass">
+    <div class="stat"><span class="stat-num">95%</span><span>Accuracy Rate</span></div>
+    <div class="stat-divider"></div>
+    <div class="stat"><span class="stat-num">3 sec</span><span>Avg. Analysis Time</span></div>
+  </div>
+
+  <!-- UPLOAD SECTION -->
+  <section class="upload-section">
+    <div class="upload-card glass" id="uploadCard">
+      <div class="upload-icon">📄</div>
+      <h2>Drop your resume here</h2>
+      <p>PDF files only · Max 10MB</p>
+      <label class="file-label glass" for="fileInput">
+        <span id="fileLabel">Choose File</span>
+        <input type="file" id="fileInput" accept=".pdf" onchange="onFileSelect(this)" />
+      </label>
+      <p class="file-error" id="fileError" style="display:none;"></p>
+      <button class="btn-primary big" id="analyzeBtn" onclick="upload()" disabled>
+        <span id="btnText">Analyze Resume 🚀</span>
+      </button>
+      <p class="upload-note">Your resume is never stored. 🔒</p>
+    </div>
+  </section>
+
+  <!-- UPLOAD HISTORY — now below upload box -->
+  <section class="history-section" id="historySection" style="display:none;">
+    <button class="history-toggle glass" onclick="toggleHistory()">
+      <span>📋 Upload History</span>
+      <span id="historyChevron">▼</span>
+    </button>
+    <div class="history-panel glass" id="historyPanel" style="display:none;">
+      <div id="historyList" class="history-list"></div>
+      <button class="btn-ghost small" onclick="clearHistory()">🗑 Clear History</button>
+    </div>
+  </section>
+
+  <!-- RESULTS -->
+  <section id="resultBox" class="results-section" style="display:none;">
+
+    <div class="analysis-banner glass">Analysis Complete ✅</div>
+    <h2 class="results-title">Your Analysis</h2>
+
+    <!-- ATS SCORE HERO -->
+    <div class="score-hero glass" id="scoreHero">
+      <div class="score-hero-left">
+        <div class="score-hero-label">ATS Score</div>
+        <div class="score-hero-num"><span id="scoreNum">0</span><small>/100</small></div>
+        <div id="scoreLabel" class="score-badge">—</div>
+      </div>
+      <div class="score-ring-wrap">
+        <svg class="score-ring" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="50" class="ring-bg"/>
+          <circle cx="60" cy="60" r="50" class="ring-fill" id="ringFill"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="results-grid">
+      <div class="res-card glass">
+        <div class="res-card-label">💪 Strengths</div>
+        <ul id="strengthList" class="result-list strength-list"></ul>
+      </div>
+      <div class="res-card glass">
+        <div class="res-card-label">⚠️ Weaknesses</div>
+        <ul id="weaknessList" class="result-list weakness-list"></ul>
+      </div>
+      <div class="res-card glass suggestions-card">
+        <div class="res-card-label">💡 Improvement Suggestions</div>
+        <ol id="suggestionList" class="result-list suggestion-list"></ol>
+      </div>
+    </div>
+
+    <div class="actions-row">
+      <button class="btn-ghost" onclick="resetApp()">← Analyze Another</button>
+      <button class="btn-primary" onclick="downloadReport()">⬇️ Download Report</button>
+    </div>
+  </section>
+
+</div>
+
+<!-- LOADER -->
+<div id="loader" class="loader-overlay" style="display:none;">
+  <div class="loader-card glass">
+    <div class="spinner"></div>
+    <p id="loaderText">Analyzing your resume...</p>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <p>ResumeAI · Built with FastAPI + Groq AI</p>
+  <p class="footer-quote">"Your resume is your first impression — make it extraordinary."</p>
+</footer>
+
+<script>
+// ─── THEME ──────────────────────────────────────────────
+const savedTheme = localStorage.getItem("theme") || "dark";
+document.documentElement.setAttribute("data-theme", savedTheme);
+updateThemeIcon(savedTheme);
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute("data-theme");
+  const next = current === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  localStorage.setItem("theme", next);
+  updateThemeIcon(next);
+}
+function updateThemeIcon(theme) {
+  const btn = document.getElementById("themeToggle");
+  if (btn) btn.querySelector(".theme-icon").textContent = theme === "dark" ? "☀️" : "🌙";
+}
+
+// ─── AUTH ───────────────────────────────────────────────
+const storedUser = localStorage.getItem("user");
+if (storedUser) showApp(storedUser);
+
+function login() {
+  const name = document.getElementById("username").value.trim();
+  if (!name) { shakeInput(); return; }
+  localStorage.setItem("user", name);
+  showApp(name);
+}
+function showApp(name) {
+  document.getElementById("loginScreen").style.display = "none";
+  const app = document.getElementById("app");
+  app.style.display = "block";
+  app.style.opacity = 0;
+  setTimeout(() => { app.style.transition = "opacity 0.5s"; app.style.opacity = 1; }, 10);
+  document.getElementById("navUser").textContent = `👋 ${name || localStorage.getItem("user")}`;
+  loadHistory();
+}
+function logout() { localStorage.removeItem("user"); location.reload(); }
+function shakeInput() {
+  const input = document.getElementById("username");
+  input.classList.add("shake");
+  setTimeout(() => input.classList.remove("shake"), 500);
+}
+
+// ─── FILE SELECT ─────────────────────────────────────────
+function onFileSelect(input) {
+  const file  = input.files[0];
+  const label = document.getElementById("fileLabel");
+  const btn   = document.getElementById("analyzeBtn");
+  const errEl = document.getElementById("fileError");
+
+  errEl.style.display = "none";
+  document.getElementById("uploadCard").classList.remove("has-error");
+  if (!file) return;
+
+  const isPDF      = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+  const isUnder10MB = file.size <= 10 * 1024 * 1024;
+
+  if (!isPDF || !isUnder10MB) {
+    label.textContent = "Choose File";
+    btn.disabled = true;
+    errEl.textContent = !isPDF ? "⚠️ Invalid file type. Please upload a PDF." : "⚠️ File too large. Max size is 10MB.";
+    errEl.style.display = "block";
+    document.getElementById("uploadCard").classList.add("has-error");
+    input.value = "";
+    return;
+  }
+  label.textContent = "✅ " + file.name;
+  btn.disabled = false;
+  document.getElementById("uploadCard").classList.add("has-file");
+}
+
+// ─── UPLOAD ──────────────────────────────────────────────
+let lastResult = null;
+
+async function upload() {
+  const file = document.getElementById("fileInput").files[0];
+  if (!file) return;
+
+  const btn    = document.getElementById("analyzeBtn");
+  const loader = document.getElementById("loader");
+
+  btn.disabled = true;
+  document.getElementById("btnText").textContent = "Analyzing...";
+  loader.style.display = "flex";
+
+  const msgs = ["Parsing your resume...", "Running ATS checks...", "Identifying strengths...", "Generating suggestions..."];
+  let msgIdx = 0;
+  const msgInterval = setInterval(() => {
+    msgIdx = (msgIdx + 1) % msgs.length;
+    document.getElementById("loaderText").textContent = msgs[msgIdx];
+  }, 1800);
+
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    { method: "POST", body: formData });
+    const res = await fetch("https://resume-analyzer-backend.onrender.com/upload", { const data = await res.json();
+
+
+    if (data.error) { showUploadError(data.error); return; }
+
+    if (data.score !== undefined && Array.isArray(data.strengths)) {
+      displayStructured(data, file.name);
+    } else {
+      const lines = Array.isArray(data.analysis) ? data.analysis : (data.analysis || "").split("\n");
+      parseAndDisplay(lines, file.name);
+    }
+  } catch (err) {
+    showUploadError("Could not connect to backend. Make sure FastAPI is running on port 8000.");
+  } finally {
+    clearInterval(msgInterval);
+    loader.style.display = "none";
+    btn.disabled = false;
+    document.getElementById("btnText").textContent = "Analyze Resume 🚀";
+  }
+}
+
+function showUploadError(msg) {
+  const errEl = document.getElementById("fileError");
+  errEl.textContent = "⚠️ " + msg;
+  errEl.style.display = "block";
+  document.getElementById("uploadCard").classList.add("has-error");
+}
+
+// ─── DISPLAY ─────────────────────────────────────────────
+function displayStructured(data, fileName) {
+  finishDisplay(
+    Math.min(parseInt(data.score) || 0, 100),
+    (data.strengths   || []).slice(0, 3),
+    (data.weaknesses  || []).slice(0, 3),
+    (data.suggestions || []).slice(0, 5),
+    fileName
+  );
+}
+function parseAndDisplay(lines, fileName) {
+  const fullText   = lines.join("\n");
+  const scoreMatch = fullText.match(/(?:ATS\s*Score[:\s]*)?(\d{1,3})\s*(?:\/\s*100|out of 100|%)/i);
+  const score      = scoreMatch ? Math.min(parseInt(scoreMatch[1]), 100) : extractFirstNumber(fullText);
+  finishDisplay(
+    score,
+    extractSection(fullText, ["strength","strong","positive"]).slice(0,3),
+    extractSection(fullText, ["weakness","weak","lacking","missing"]).slice(0,3),
+    extractSection(fullText, ["suggestion","recommend","improve","consider","add"]).slice(0,5),
+    fileName
+  );
+}
+function finishDisplay(score, strengths, weaknesses, suggestions, fileName) {
+  lastResult = { score, strengths, weaknesses, suggestions, fileName, date: new Date().toLocaleString() };
+  saveToHistory(lastResult);
+  document.getElementById("resultBox").style.display = "block";
+  document.getElementById("resultBox").scrollIntoView({ behavior: "smooth", block: "start" });
+  animateScore(score);
+  fillList("strengthList",   strengths);
+  fillList("weaknessList",   weaknesses);
+  fillList("suggestionList", suggestions);
+}
+function extractSection(text, keywords) {
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+  let inSection = false, items = [];
+  for (const line of lines) {
+    const lower = line.toLowerCase();
+    if (keywords.some(k => lower.includes(k)) && line.length < 80) { inSection = true; continue; }
+    if (inSection && /^[*#\-]*(strengths?|weaknesses?|suggestions?|improvements?|scores?)[*#\-:]/i.test(line)) inSection = false;
+    if (inSection) { const c = line.replace(/^[\d\.\-\*\•]+\s*/, "").trim(); if (c.length > 10) items.push(c); }
+  }
+  if (!items.length)
+    for (const line of lines)
+      if (/^[\-\*\•\d\.]/.test(line) && line.length > 15) items.push(line.replace(/^[\d\.\-\*\•]+\s*/, "").trim());
+  return items;
+}
+function extractFirstNumber(text) { const m = text.match(/\b([4-9]\d|100)\b/); return m ? parseInt(m[1]) : 72; }
+function fillList(id, items) {
+  const el = document.getElementById(id);
+  el.innerHTML = "";
+  if (!items || !items.length) { el.innerHTML = `<li class="placeholder-item">No data found.</li>`; return; }
+  items.forEach((item, i) => {
+    const li = document.createElement("li");
+    li.textContent = item;
+    li.style.animationDelay = `${i * 0.1}s`;
+    li.classList.add("fade-in-up");
+    el.appendChild(li);
+  });
+}
+
+// ─── SCORE ANIMATION ─────────────────────────────────────
+function animateScore(target) {
+  const numEl = document.getElementById("scoreNum");
+  const ring  = document.getElementById("ringFill");
+  const label = document.getElementById("scoreLabel");
+  const hero  = document.getElementById("scoreHero");
+  const C     = 2 * Math.PI * 50;
+  ring.style.strokeDasharray  = C;
+  ring.style.strokeDashoffset = C;
+  let current = 0;
+  const interval = setInterval(() => {
+    current = Math.min(current + target / 60, target);
+    numEl.textContent = Math.round(current);
+    ring.style.strokeDashoffset = C - (current / 100) * C;
+    if (current >= target) {
+      clearInterval(interval);
+      if (target >= 75) {
+        ring.style.stroke = "#22c55e"; label.textContent = "Excellent 🎉"; label.className = "score-badge badge-green"; hero.classList.add("score-green");
+      } else if (target >= 50) {
+        ring.style.stroke = "#f97316"; label.textContent = "Good 👍"; label.className = "score-badge badge-orange"; hero.classList.add("score-orange");
+      } else {
+        ring.style.stroke = "#ef4444"; label.textContent = "Needs Work ⚠️"; label.className = "score-badge badge-red"; hero.classList.add("score-red");
+      }
+    }
+  }, 16);
+}
+
+// ─── DOWNLOAD REPORT — clean PDF via print ───────────────
+function downloadReport() {
+  if (!lastResult) return;
+  const { score, strengths, weaknesses, suggestions, fileName, date } = lastResult;
+  const user   = localStorage.getItem("user") || "User";
+  const rating = score >= 75 ? "Excellent" : score >= 50 ? "Good" : "Needs Work";
+  const ratingColor = score >= 75 ? "#16a34a" : score >= 50 ? "#ea580c" : "#dc2626";
+  const ringColor   = ratingColor;
+
+  // Score ring SVG for PDF
+  const C      = 2 * Math.PI * 50;
+  const offset = C - (score / 100) * C;
+
+  const toList = (arr, color, bg) => arr.length
+    ? arr.map(i => `<li style="background:${bg};border-left:3px solid ${color};padding:10px 14px;border-radius:6px;margin-bottom:8px;font-size:13px;line-height:1.5;color:#1a1a2e;">${i}</li>`).join("")
+    : `<li style="color:#aaa;font-size:13px;">No data found.</li>`;
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <title>ResumeAI Report — ${fileName}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #f4f6fb;
+      color: #1a1a2e;
+      padding: 0;
+    }
+
+    .page {
+      max-width: 760px;
+      margin: 0 auto;
+      background: #fff;
+      min-height: 100vh;
+      padding: 52px 56px 60px;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding-bottom: 28px;
+      border-bottom: 2px solid #ede9fe;
+      margin-bottom: 36px;
+    }
+    .brand { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; color: #1a1a2e; }
+    .brand span { color: #7c3aed; }
+    .meta { text-align: right; font-size: 12px; color: #6b7280; line-height: 1.8; }
+    .meta strong { color: #1a1a2e; font-weight: 600; }
+
+    /* ── Score hero ── */
+    .score-section {
+      display: flex;
+      align-items: center;
+      gap: 36px;
+      background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+      border-radius: 16px;
+      padding: 32px 36px;
+      margin-bottom: 32px;
+      border: 1px solid #ddd6fe;
+    }
+    .score-text h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #7c3aed;
+      margin-bottom: 8px;
+    }
+    .score-num {
+      font-family: 'Syne', sans-serif;
+      font-size: 72px;
+      font-weight: 800;
+      line-height: 1;
+      color: ${ratingColor};
+    }
+    .score-num small { font-size: 22px; color: #9ca3af; font-weight: 400; }
+    .rating-pill {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 5px 16px;
+      border-radius: 50px;
+      font-size: 13px;
+      font-weight: 600;
+      background: ${ratingColor}18;
+      color: ${ratingColor};
+      border: 1px solid ${ratingColor}44;
+    }
+    .score-ring-wrap { flex-shrink: 0; }
+    .score-ring { transform: rotate(-90deg); }
+
+    /* ── Section ── */
+    .section { margin-bottom: 28px; }
+    .section-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #6b7280;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    ul { list-style: none; padding: 0; }
+
+    /* ── Footer ── */
+    .footer {
+      margin-top: 44px;
+      padding-top: 20px;
+      border-top: 1px solid #ede9fe;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: #9ca3af;
+    }
+    .footer .brand-sm { font-family: 'Syne', sans-serif; font-weight: 700; color: #7c3aed; font-size: 13px; }
+
+    @media print {
+      body { background: #fff; }
+      .page { padding: 40px 48px; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="brand">Resume<span>AI</span></div>
+    <div class="meta">
+      <div><strong>Analyzed by:</strong> ${user}</div>
+      <div><strong>File:</strong> ${fileName}</div>
+      <div><strong>Date:</strong> ${date}</div>
+    </div>
+  </div>
+
+  <!-- Score -->
+  <div class="score-section">
+    <div class="score-text">
+      <h2>ATS Score</h2>
+      <div class="score-num">${score}<small>/100</small></div>
+      <div class="rating-pill">${rating}</div>
+    </div>
+    <div class="score-ring-wrap">
+      <svg width="120" height="120" viewBox="0 0 120 120" class="score-ring">
+        <circle cx="60" cy="60" r="50" fill="none" stroke="#ede9fe" stroke-width="10"/>
+        <circle cx="60" cy="60" r="50" fill="none"
+          stroke="${ringColor}" stroke-width="10"
+          stroke-linecap="round"
+          stroke-dasharray="${C.toFixed(2)}"
+          stroke-dashoffset="${offset.toFixed(2)}"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Strengths -->
+  <div class="section">
+    <div class="section-title">💪 Strengths</div>
+    <ul>${toList(strengths, "#16a34a", "#f0fdf4")}</ul>
+  </div>
+
+  <!-- Weaknesses -->
+  <div class="section">
+    <div class="section-title">⚠️ Weaknesses</div>
+    <ul>${toList(weaknesses, "#dc2626", "#fef2f2")}</ul>
+  </div>
+
+  <!-- Suggestions -->
+  <div class="section">
+    <div class="section-title">💡 Improvement Suggestions</div>
+    <ul>${suggestions.length
+      ? suggestions.map((s,i) => `<li style="background:#faf5ff;border-left:3px solid #7c3aed;padding:10px 14px 10px 40px;border-radius:6px;margin-bottom:8px;font-size:13px;line-height:1.5;color:#1a1a2e;position:relative;"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);background:#7c3aed;color:#fff;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">${i+1}</span>${s}</li>`).join("")
+      : `<li style="color:#aaa;font-size:13px;">No data found.</li>`
+    }</ul>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <span class="brand-sm">ResumeAI</span>
+    <span>"Your resume is your first impression — make it extraordinary."</span>
+  </div>
+
+</div>
+<script>window.onload = () => { window.print(); }<\/script>
+</body>
+</html>`;
+
+  const blob   = new Blob([html], { type: "text/html" });
+  const url    = URL.createObjectURL(blob);
+  const win    = window.open(url, "_blank");
+  if (!win) alert("Please allow popups for this site to download the report.");
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+// ─── HISTORY ─────────────────────────────────────────────
+function getHistory() { return JSON.parse(localStorage.getItem(`history_${localStorage.getItem("user")||"guest"}`) || "[]"); }
+function saveToHistory(r) {
+  const key = `history_${localStorage.getItem("user")||"guest"}`;
+  const h   = getHistory();
+  h.unshift({ fileName: r.fileName, score: r.score, date: r.date });
+  if (h.length > 20) h.pop();
+  localStorage.setItem(key, JSON.stringify(h));
+  loadHistory();
+}
+function loadHistory() {
+  const history = getHistory();
+  const section = document.getElementById("historySection");
+  const list    = document.getElementById("historyList");
+  if (!history.length) { section.style.display = "none"; return; }
+  section.style.display = "block";
+  list.innerHTML = history.map(h => `
+    <div class="history-item">
+      <div class="history-info">
+        <span class="history-file">📄 ${h.fileName}</span>
+        <span class="history-date">${h.date}</span>
+      </div>
+      <div class="history-score ${h.score >= 75 ? 'hs-green' : h.score >= 50 ? 'hs-orange' : 'hs-red'}">${h.score}/100</div>
+    </div>`).join("");
+}
+function toggleHistory() {
+  const panel   = document.getElementById("historyPanel");
+  const chevron = document.getElementById("historyChevron");
+  const open    = panel.style.display === "none";
+  panel.style.display = open ? "block" : "none";
+  chevron.textContent = open ? "▲" : "▼";
+}
+function clearHistory() {
+  localStorage.removeItem(`history_${localStorage.getItem("user")||"guest"}`);
+  loadHistory();
+  document.getElementById("historyPanel").style.display = "none";
+  document.getElementById("historyChevron").textContent = "▼";
+}
+
+// ─── RESET ───────────────────────────────────────────────
+function resetApp() {
+  document.getElementById("resultBox").style.display = "none";
+  document.getElementById("fileInput").value = "";
+  document.getElementById("fileLabel").textContent = "Choose File";
+  document.getElementById("fileError").style.display = "none";
+  document.getElementById("analyzeBtn").disabled = true;
+  document.getElementById("uploadCard").classList.remove("has-file", "has-error");
+  document.getElementById("scoreHero").classList.remove("score-green", "score-orange", "score-red");
+  lastResult = null;
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const input = document.getElementById("username");
+  if (input) input.addEventListener("keydown", e => { if (e.key === "Enter") login(); });
+});
+</script>
+</body>
+</html>
