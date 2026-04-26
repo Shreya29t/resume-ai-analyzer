@@ -253,9 +253,8 @@ async function upload() {
   try {
     const formData = new FormData();
     formData.append("file", file);
-    { method: "POST", body: formData });
-    const res = await fetch("https://resume-analyzer-backend.onrender.com/upload", { const data = await res.json();
-
+    const res = await fetch("https://resume-analyzer-backend.onrender.com/upload", { method: "POST", body: formData });
+    const data = await res.json();
 
     if (data.error) { showUploadError(data.error); return; }
 
