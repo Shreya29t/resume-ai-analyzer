@@ -10,7 +10,6 @@
 <body>
 
 <!-- NAVBAR -->
-
 <nav class="navbar">
   <div class="logo">Resume<span>AI</span></div>
   <div class="nav-right">
@@ -53,7 +52,6 @@
 <!-- MAIN APP -->
 <div id="app" style="display:none;">
 
-  <!-- HERO — text aligned right -->
   <section class="hero">
     <div class="hero-inner">
       <div class="hero-tag">AI Resume Analyzer</div>
@@ -62,14 +60,12 @@
     </div>
   </section>
 
-  <!-- STATS BAR -->
   <div class="stats-bar glass">
     <div class="stat"><span class="stat-num">95%</span><span>Accuracy Rate</span></div>
     <div class="stat-divider"></div>
     <div class="stat"><span class="stat-num">3 sec</span><span>Avg. Analysis Time</span></div>
   </div>
 
-  <!-- UPLOAD SECTION -->
   <section class="upload-section">
     <div class="upload-card glass" id="uploadCard">
       <div class="upload-icon">📄</div>
@@ -87,7 +83,6 @@
     </div>
   </section>
 
-  <!-- UPLOAD HISTORY — now below upload box -->
   <section class="history-section" id="historySection" style="display:none;">
     <button class="history-toggle glass" onclick="toggleHistory()">
       <span>📋 Upload History</span>
@@ -99,13 +94,10 @@
     </div>
   </section>
 
-  <!-- RESULTS -->
   <section id="resultBox" class="results-section" style="display:none;">
-
     <div class="analysis-banner glass">Analysis Complete ✅</div>
     <h2 class="results-title">Your Analysis</h2>
 
-    <!-- ATS SCORE HERO -->
     <div class="score-hero glass" id="scoreHero">
       <div class="score-hero-left">
         <div class="score-hero-label">ATS Score</div>
@@ -148,10 +140,10 @@
   <div class="loader-card glass">
     <div class="spinner"></div>
     <p id="loaderText">Analyzing your resume...</p>
+    <small>This may take up to 50 seconds on first load ☕</small>
   </div>
 </div>
 
-<!-- FOOTER -->
 <footer class="footer">
   <p>ResumeAI · Built with FastAPI + Groq AI</p>
   <p class="footer-quote">"Your resume is your first impression — make it extraordinary."</p>
@@ -207,14 +199,11 @@ function onFileSelect(input) {
   const label = document.getElementById("fileLabel");
   const btn   = document.getElementById("analyzeBtn");
   const errEl = document.getElementById("fileError");
-
   errEl.style.display = "none";
   document.getElementById("uploadCard").classList.remove("has-error");
   if (!file) return;
-
-  const isPDF      = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+  const isPDF       = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
   const isUnder10MB = file.size <= 10 * 1024 * 1024;
-
   if (!isPDF || !isUnder10MB) {
     label.textContent = "Choose File";
     btn.disabled = true;
@@ -230,20 +219,21 @@ function onFileSelect(input) {
 }
 
 // ─── UPLOAD ──────────────────────────────────────────────
+// ✅ UPDATED BACKEND URL
+const BACKEND_URL = "https://resume-analyzer-backend-43d3.onrender.com";
+
 let lastResult = null;
 
 async function upload() {
   const file = document.getElementById("fileInput").files[0];
   if (!file) return;
-
   const btn    = document.getElementById("analyzeBtn");
   const loader = document.getElementById("loader");
-
   btn.disabled = true;
   document.getElementById("btnText").textContent = "Analyzing...";
   loader.style.display = "flex";
 
-  const msgs = ["Parsing your resume...", "Running ATS checks...", "Identifying strengths...", "Generating suggestions..."];
+  const msgs = ["Parsing your resume...", "Running ATS checks...", "Identifying strengths...", "Generating suggestions...", "Almost there..."];
   let msgIdx = 0;
   const msgInterval = setInterval(() => {
     msgIdx = (msgIdx + 1) % msgs.length;
@@ -253,11 +243,9 @@ async function upload() {
   try {
     const formData = new FormData();
     formData.append("file", file);
-    const res = await fetch("https://resume-analyzer-backend.onrender.com/upload", { method: "POST", body: formData });
+    const res = await fetch(`${BACKEND_URL}/upload`, { method: "POST", body: formData });
     const data = await res.json();
-
     if (data.error) { showUploadError(data.error); return; }
-
     if (data.score !== undefined && Array.isArray(data.strengths)) {
       displayStructured(data, file.name);
     } else {
@@ -265,7 +253,7 @@ async function upload() {
       parseAndDisplay(lines, file.name);
     }
   } catch (err) {
-    showUploadError("Could not connect to backend. Make sure FastAPI is running on port 8000.");
+    showUploadError("Could not connect to backend. The server may be waking up — please try again in 30 seconds.");
   } finally {
     clearInterval(msgInterval);
     loader.style.display = "none";
@@ -368,204 +356,69 @@ function animateScore(target) {
   }, 16);
 }
 
-// ─── DOWNLOAD REPORT — clean PDF via print ───────────────
+// ─── DOWNLOAD REPORT ─────────────────────────────────────
 function downloadReport() {
   if (!lastResult) return;
   const { score, strengths, weaknesses, suggestions, fileName, date } = lastResult;
   const user   = localStorage.getItem("user") || "User";
   const rating = score >= 75 ? "Excellent" : score >= 50 ? "Good" : "Needs Work";
   const ratingColor = score >= 75 ? "#16a34a" : score >= 50 ? "#ea580c" : "#dc2626";
-  const ringColor   = ratingColor;
-
-  // Score ring SVG for PDF
   const C      = 2 * Math.PI * 50;
   const offset = C - (score / 100) * C;
-
   const toList = (arr, color, bg) => arr.length
     ? arr.map(i => `<li style="background:${bg};border-left:3px solid ${color};padding:10px 14px;border-radius:6px;margin-bottom:8px;font-size:13px;line-height:1.5;color:#1a1a2e;">${i}</li>`).join("")
     : `<li style="color:#aaa;font-size:13px;">No data found.</li>`;
 
   const html = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8"/>
-  <title>ResumeAI Report — ${fileName}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: #f4f6fb;
-      color: #1a1a2e;
-      padding: 0;
-    }
-
-    .page {
-      max-width: 760px;
-      margin: 0 auto;
-      background: #fff;
-      min-height: 100vh;
-      padding: 52px 56px 60px;
-    }
-
-    /* ── Header ── */
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      padding-bottom: 28px;
-      border-bottom: 2px solid #ede9fe;
-      margin-bottom: 36px;
-    }
-    .brand { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; color: #1a1a2e; }
-    .brand span { color: #7c3aed; }
-    .meta { text-align: right; font-size: 12px; color: #6b7280; line-height: 1.8; }
-    .meta strong { color: #1a1a2e; font-weight: 600; }
-
-    /* ── Score hero ── */
-    .score-section {
-      display: flex;
-      align-items: center;
-      gap: 36px;
-      background: linear-gradient(135deg, #f5f3ff, #ede9fe);
-      border-radius: 16px;
-      padding: 32px 36px;
-      margin-bottom: 32px;
-      border: 1px solid #ddd6fe;
-    }
-    .score-text h2 {
-      font-family: 'Syne', sans-serif;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      color: #7c3aed;
-      margin-bottom: 8px;
-    }
-    .score-num {
-      font-family: 'Syne', sans-serif;
-      font-size: 72px;
-      font-weight: 800;
-      line-height: 1;
-      color: ${ratingColor};
-    }
-    .score-num small { font-size: 22px; color: #9ca3af; font-weight: 400; }
-    .rating-pill {
-      display: inline-block;
-      margin-top: 12px;
-      padding: 5px 16px;
-      border-radius: 50px;
-      font-size: 13px;
-      font-weight: 600;
-      background: ${ratingColor}18;
-      color: ${ratingColor};
-      border: 1px solid ${ratingColor}44;
-    }
-    .score-ring-wrap { flex-shrink: 0; }
-    .score-ring { transform: rotate(-90deg); }
-
-    /* ── Section ── */
-    .section { margin-bottom: 28px; }
-    .section-title {
-      font-family: 'Syne', sans-serif;
-      font-size: 13px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #6b7280;
-      margin-bottom: 12px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid #f3f4f6;
-    }
-    ul { list-style: none; padding: 0; }
-
-    /* ── Footer ── */
-    .footer {
-      margin-top: 44px;
-      padding-top: 20px;
-      border-top: 1px solid #ede9fe;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 11px;
-      color: #9ca3af;
-    }
-    .footer .brand-sm { font-family: 'Syne', sans-serif; font-weight: 700; color: #7c3aed; font-size: 13px; }
-
-    @media print {
-      body { background: #fff; }
-      .page { padding: 40px 48px; box-shadow: none; }
-    }
-  </style>
-</head>
-<body>
+<html><head><meta charset="UTF-8"/>
+<title>ResumeAI Report</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:#f4f6fb;color:#1a1a2e;padding:0;}
+.page{max-width:760px;margin:0 auto;background:#fff;min-height:100vh;padding:52px 56px 60px;}
+.header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:28px;border-bottom:2px solid #ede9fe;margin-bottom:36px;}
+.brand{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;} .brand span{color:#7c3aed;}
+.meta{text-align:right;font-size:12px;color:#6b7280;line-height:1.8;} .meta strong{color:#1a1a2e;}
+.score-section{display:flex;align-items:center;gap:36px;background:linear-gradient(135deg,#f5f3ff,#ede9fe);border-radius:16px;padding:32px 36px;margin-bottom:32px;border:1px solid #ddd6fe;}
+.score-num{font-family:'Syne',sans-serif;font-size:72px;font-weight:800;line-height:1;color:${ratingColor};}
+.score-num small{font-size:22px;color:#9ca3af;font-weight:400;}
+.rating-pill{display:inline-block;margin-top:12px;padding:5px 16px;border-radius:50px;font-size:13px;font-weight:600;background:${ratingColor}18;color:${ratingColor};border:1px solid ${ratingColor}44;}
+.section{margin-bottom:28px;}
+.section-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #f3f4f6;}
+ul{list-style:none;padding:0;}
+.footer{margin-top:44px;padding-top:20px;border-top:1px solid #ede9fe;display:flex;justify-content:space-between;font-size:11px;color:#9ca3af;}
+.footer .brand-sm{font-family:'Syne',sans-serif;font-weight:700;color:#7c3aed;font-size:13px;}
+@media print{body{background:#fff;}.page{padding:40px 48px;}}
+</style></head><body>
 <div class="page">
-
-  <!-- Header -->
   <div class="header">
     <div class="brand">Resume<span>AI</span></div>
-    <div class="meta">
-      <div><strong>Analyzed by:</strong> ${user}</div>
-      <div><strong>File:</strong> ${fileName}</div>
-      <div><strong>Date:</strong> ${date}</div>
-    </div>
+    <div class="meta"><div><strong>Analyzed by:</strong> ${user}</div><div><strong>File:</strong> ${fileName}</div><div><strong>Date:</strong> ${date}</div></div>
   </div>
-
-  <!-- Score -->
   <div class="score-section">
-    <div class="score-text">
-      <h2>ATS Score</h2>
+    <div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#7c3aed;margin-bottom:8px;">ATS Score</div>
       <div class="score-num">${score}<small>/100</small></div>
       <div class="rating-pill">${rating}</div>
     </div>
-    <div class="score-ring-wrap">
-      <svg width="120" height="120" viewBox="0 0 120 120" class="score-ring">
-        <circle cx="60" cy="60" r="50" fill="none" stroke="#ede9fe" stroke-width="10"/>
-        <circle cx="60" cy="60" r="50" fill="none"
-          stroke="${ringColor}" stroke-width="10"
-          stroke-linecap="round"
-          stroke-dasharray="${C.toFixed(2)}"
-          stroke-dashoffset="${offset.toFixed(2)}"/>
-      </svg>
-    </div>
+    <svg width="120" height="120" viewBox="0 0 120 120" style="transform:rotate(-90deg)">
+      <circle cx="60" cy="60" r="50" fill="none" stroke="#ede9fe" stroke-width="10"/>
+      <circle cx="60" cy="60" r="50" fill="none" stroke="${ratingColor}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C.toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}"/>
+    </svg>
   </div>
-
-  <!-- Strengths -->
-  <div class="section">
-    <div class="section-title">💪 Strengths</div>
-    <ul>${toList(strengths, "#16a34a", "#f0fdf4")}</ul>
-  </div>
-
-  <!-- Weaknesses -->
-  <div class="section">
-    <div class="section-title">⚠️ Weaknesses</div>
-    <ul>${toList(weaknesses, "#dc2626", "#fef2f2")}</ul>
-  </div>
-
-  <!-- Suggestions -->
-  <div class="section">
-    <div class="section-title">💡 Improvement Suggestions</div>
-    <ul>${suggestions.length
-      ? suggestions.map((s,i) => `<li style="background:#faf5ff;border-left:3px solid #7c3aed;padding:10px 14px 10px 40px;border-radius:6px;margin-bottom:8px;font-size:13px;line-height:1.5;color:#1a1a2e;position:relative;"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);background:#7c3aed;color:#fff;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">${i+1}</span>${s}</li>`).join("")
-      : `<li style="color:#aaa;font-size:13px;">No data found.</li>`
-    }</ul>
-  </div>
-
-  <!-- Footer -->
-  <div class="footer">
-    <span class="brand-sm">ResumeAI</span>
-    <span>"Your resume is your first impression — make it extraordinary."</span>
-  </div>
-
+  <div class="section"><div class="section-title">💪 Strengths</div><ul>${toList(strengths,"#16a34a","#f0fdf4")}</ul></div>
+  <div class="section"><div class="section-title">⚠️ Weaknesses</div><ul>${toList(weaknesses,"#dc2626","#fef2f2")}</ul></div>
+  <div class="section"><div class="section-title">💡 Suggestions</div><ul>${suggestions.length ? suggestions.map((s,i)=>`<li style="background:#faf5ff;border-left:3px solid #7c3aed;padding:10px 14px 10px 40px;border-radius:6px;margin-bottom:8px;font-size:13px;position:relative;"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);background:#7c3aed;color:#fff;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">${i+1}</span>${s}</li>`).join("") : `<li style="color:#aaa;">No data found.</li>`}</ul></div>
+  <div class="footer"><span class="brand-sm">ResumeAI</span><span>"Your resume is your first impression — make it extraordinary."</span></div>
 </div>
-<script>window.onload = () => { window.print(); }<\/script>
-</body>
-</html>`;
+<script>window.onload=()=>{window.print();}<\/script>
+</body></html>`;
 
-  const blob   = new Blob([html], { type: "text/html" });
-  const url    = URL.createObjectURL(blob);
-  const win    = window.open(url, "_blank");
-  if (!win) alert("Please allow popups for this site to download the report.");
+  const blob = new Blob([html], { type: "text/html" });
+  const url  = URL.createObjectURL(blob);
+  const win  = window.open(url, "_blank");
+  if (!win) alert("Please allow popups to download the report.");
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 
